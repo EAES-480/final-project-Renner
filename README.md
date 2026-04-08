@@ -9,25 +9,25 @@ Choose a dataset and:
   * summarize your data, method, and results in README.md and a 5-min presentation.
 
 ## Datasets
-
-**Undergrads**
-Daytonna: Help search on 4/8.
-Eli: Help search on 4/8.
-Dylan J.: Has data already.
-Rachel: Help search on 4/8.
-AnaBelle: NA
-Indigo: NA
-Samarth: NA
-Arianna: Discuss with Gavin.
-
-**Grads**
-Aaron: Has data already.
-Amelia: [Forest Inventory Analysis Data for Southeast Alaska](https://github.com/McNicol-Lab/Yellow-cedar-data-compilation)
-Dylan E.: Discuss with Gavin.
-Louis: NA
-Santiago: Discuss with Gavin.
-Wen: [Coastal temperate rainforest soil carbon](https://datadryad.org/dataset/doi:10.5061/dryad.5jf6j1r) [use 2024 version]
-
+  
+**Undergrads**  
+Daytonna: Help search on 4/8.  
+Eli: Help search on 4/8.  
+Dylan J.: Has data already.  
+Rachel: Help search on 4/8.  
+AnaBelle: NA  
+Indigo: NA  
+Samarth: NA  
+Arianna: Discuss with Gavin.  
+  
+**Grads**  
+Aaron: Has data already.  
+Amelia: [Forest Inventory Analysis Data for Southeast Alaska](https://github.com/McNicol-Lab/Yellow-cedar-data-compilation)  
+Dylan E.: Discuss with Gavin.  
+Louis: NA  
+Santiago: Discuss with Gavin.  
+Wen: [Coastal temperate rainforest soil carbon](https://datadryad.org/dataset/doi:10.5061/dryad.5jf6j1r) [use 2024 version]  
+  
 ## Deliverables
 
 1.  Proposal - due Wed. April 15, at midnight. (complete proposal.Rmd in your fork)
