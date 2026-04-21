@@ -14,6 +14,13 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
+
+> GM GRADE: 17.5/20 - great work, my main concern is that you keep things simple. Don't overdo it on data joins, use a lm feature selection > random forest training > variable importance extraction approach. The last part on var. imp. we'll cover tomorrow (Wed 4/22).
+
+> Description 7/8
+> Content: 9/10
+> Quality: 1.5/2
+
 ### Introduction
 
 Three datasets will be utilized: (1) Forest Inventory and Analysis (FIA) for Southeastern Alaska, (2) plant trait data from TRY for the tree species present in the FIA data, and (3) International Soil Carbon Network (ISCN) soil data. These data capture information from the biosphere and ecosphere at both the individual and community level.
@@ -23,26 +30,31 @@ My goal is to identify the best predictors of total tree carbon using plant trai
 More information on each dataset is below.
 
 ![Figure 1. \*\**Changes will be made to show that total tree carbon comes from the FIA data.*](Figures/figure1.png){width="413"}
+> GM: This figure did not exist in your repo, so it doesn't load here. I think I saw a preview of it in class though and it looks neat, however, joining all three of these datasets may be difficult.
 
 ### Data
 
 I have not joined the 3 datasets together yet, but I did join the 2 different FIA datasets together & clean them.
 
-```{r Libraries, message = FALSE, warning = FALSE}
+> GM: Sticking to the two FIA datasets may be a nice choice. Or, if you want to add more, you could do so by focusing on joining some traits to the tree species from TRY.
+
+```{r libraries, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(dplyr)
 library(skimr)
 library(ggplot2)
 ```
 
-```{r Reading in Data}
-fia_data <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/nondecline_treeC.csv")
-soildata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/ISCNprofiles_near_FIAplots - ISCNprofiles_near_FIAplots.csv")
-fia_data2 <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/non_decline_forestCstocks - non_decline_forestCstocks.csv")
-trydata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/CTR_tree_trydat.csv")
+```{r read-data}
+fia_data <- read_csv("../data/nondecline_treeC.csv")
+soildata <- read_csv("../data/ISCNprofiles_near_FIAplots - ISCNprofiles_near_FIAplots.csv")
+fia_data2 <- read_csv("../data/non_decline_forestCstocks - non_decline_forestCstocks.csv")
+# trydata <- read_csv("../data/CTR_tree_trydat.csv")
 ```
 
-```{r Data Cleaning}
+> GM: -0.5 (Quality) I did have to change these filepaths to get it to knit on my end. Good job getting the data into the data folder though.
+
+```{r fia-data-cleaning}
 # converted units 
 fia_data <- fia_data %>%
   mutate(biomass.dead.C.gm2 = 100 * biomass.Mg.ha.dead, 
@@ -54,7 +66,11 @@ fia_data2 <- fia_data2 %>%
   select(-dwdC.tacre, -dwdC.Mgha, -AGunderstoryC.tacre, -AGunderstoryC.Mgha, -BGunderstoryC.Mgha, -BGunderstoryC.tacre, -litterC.Mgha, -litterC.tacre)
 
 fia <- bind_rows(fia_data, fia_data2)
+```
 
+> GM: Nice job moving live and dead biomass over to gC m-2. 
+
+```{r try-data-cleaning, eval = F}
 # making try data smaller so it's easier to pivot and join 
 try <- trydata %>%
   select(AccSpeciesName, TraitName, OrigValueStr, OrigUnitStr)
@@ -73,17 +89,26 @@ try2 <- try %>%
 
 FIA data are collected on permanent plots around the US; this set is from Alaska. Each case is a tree measured in a plot in a year. The same trees are measured year after year. The variables relate to tree carbon storage; the ones I am most interested in are my outcome variable (total tree carbon) and a few of explanatory variables (downed woody debris, elevation, longitude/latitude, and forest type). Several variables in this dataset will be autocorrelated with the outcome variable - for example, aboveground biomass will affect total tree carbon because more aboveground biomass allows for more carbon storage. I will avoid using these variables because although they will likely be good predictors, they're not scientifically meaningful.
 
-```{r}
+```{r skim-fia}
 skim(fia)
 ```
+
+> GM: -1. (Description) please be careful here. Is each row a tree, or is each row a tree species (within a given plot-survey year)? I think each row is the biomass stocks for one tree species in each plot, meaning its the sum of the total tree biomass divided by the plot size. I'm adding code below to help confirm.
+
+```{r nrow-each-species-per-fia-plot-year}
+fia %>% filter(Plot == 26, Yr %in% c(1998, 2005, 2016)) %>% 
+  group_by(Plot, Yr, Common.Name) %>% 
+  summarize(count_per_spp = n())
+```
+
+> Yes, my code chunk here confirms that each row is the biomass characteristics for a given species not an individual tree. Perhaps just a typo in your description but quite important to be accurate for downstream analysis and communication.
 
 #### TRY
 
 The TRY data are plant trait data collected from many, many global studies. The data table I have are for the tree species present in the FIA data. The question I am asking with these data is 'what physical traits might influence tree carbon storage?'. Each case represents a species from the FIA dataset. There are \~250 variables -- when I clean the dataset, these will greatly be reduced. The raw version is below because I haven't finished cleaning yet. In this, each trait of each plant is a separate row. I removed a lot of rows that didn't include traits recognized by TRY - ones that are hyperspecific to certain studies and would only apply to one of the five FIA species.
 
-```{r}
+```{r skim-try, eval = F}
 skim(try)
-
 ```
 
 #### ISCN
@@ -98,7 +123,7 @@ ISCN has an international soil database from thousands of global sites. The data
 
 #### Preliminary Data Analysis
 
-```{r}
+```{r prelim-figs}
 fia %>%
   filter(total_treeC_gm2 < 4000000) %>%
   ggplot(aes(x = fct_reorder(foresttype, total_treeC_gm2), y = total_treeC_gm2)) + 
@@ -119,6 +144,10 @@ fia %>%
 ```
 
 I used random forest once as an undergrad but the refresher has been really helpful. I want to try bagging because I want to learn it, but also because it seems an appropriate tool for a dataset of this magnitude (post-join). To support a claim that a predictor is of scientific merit, (1) I would need to find a statistically signifcant relationship between it and the outcome variable and (2) the relationship must make sense in context; otherwise, it's likely to be a spurious conclusion. I'd use Pearsons correlation if it's a numeric predictor variable and a t test if it's a numeric predictor.
+
+> GM: -1 (Content) does your filtering relfect an idea to remove potentally erroneous / implausible numbers? If so, then narrative stating that is important. 
+
+> GM: -1 (Content) my suggestion is to select a few variables you think will have correlations with total tree biomass, inspect linear models for significance, and retain those with significant relationships. Then, include sig correlates in your random forest model. Bagging occurrs automatically during random forest training. It is the process of subsetting your data and predictors that we discussed in class briefly.
 
 ### References
 
