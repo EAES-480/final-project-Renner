@@ -1,0 +1,255 @@
+---
+title: "Alaskan Forest Carbon Across Latitudes"
+author: "Amelia Renner"
+output: 
+  xaringan::moon_reader:
+    css: [robot, robot, robot]
+    yolo: false
+---
+class: center
+```{r setup, include=FALSE, out.width="90%"}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.retina = 2)
+```
+
+
+```{r Libraries, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(dplyr)
+library(skimr)
+library(ggplot2)
+library(sf)
+library(mapview)
+library(usmap)
+library(ggspatial)
+library(shadowtext)
+library(ggformula)
+library(xaringan)
+```
+
+```{r Reading in Data}
+fia_data <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/nondecline_treeC.csv")
+soildata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/ISCNprofiles_near_FIAplots - ISCNprofiles_near_FIAplots.csv")
+fia_data2 <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/non_decline_forestCstocks - non_decline_forestCstocks.csv")
+#trydata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/CTR_tree_trydat.csv")
+```
+
+```{r Data Cleaning}
+# converted units
+fia_data <- fia_data %>%
+  mutate(biomass.dead.C.gm2 = 100 * biomass.Mg.ha.dead,
+         biomass.live.C.gm2 = 100 * biomass.Mg.ha.live) %>%
+  select(-biomass.Mg.ha.dead, -biomass.Mg.ha.live, -standingdead_C_Mg_ha, -livetree_C_Mg_ha, -BGtree_C_Mg_ha)
+
+# removed columns that were in different units
+fia_data2 <- fia_data2 %>%
+  select(-dwdC.tacre, -dwdC.Mgha, -AGunderstoryC.tacre, -AGunderstoryC.Mgha, -BGunderstoryC.Mgha, -BGunderstoryC.tacre, -litterC.Mgha, -litterC.tacre)
+
+fia <- bind_rows(fia_data, fia_data2)
+# 
+# # making try data smaller so it's easier to pivot and join 
+# try <- trydata %>%
+#   select(AccSpeciesName, TraitName, OrigValueStr, OrigUnitStr)
+# 
+# # removing blank cells in TraitName
+# try[try == ""] <- NA
+# try <- na.omit(try)
+# 
+# # widened so that traits are columns instead of rows 
+# try2 <- try %>%
+#   group_by(AccSpeciesName) %>%
+#   pivot_wider(names_from = TraitName, values_from = OrigValueStr, id_cols = AccSpeciesName)
+```
+
+
+### *How does variability in total forest carbon change along a latitudinal gradient in Alaska?*
+
+```{r Mapping, out.width="60%"}
+fia_pts <- fia %>% 
+  select(LON, LAT) %>%
+  mutate(lon = LON, 
+         lat = LAT) %>%
+  select(-LON, -LAT)
+
+alaska_map <- map_data("world", region = "USA:Alaska")
+
+ggplot() +
+  geom_polygon(data = alaska_map,
+               aes(x = long, y = lat, group = group),
+               fill = "gray90", color = "black") +
+  geom_point(data = fia_pts,
+             aes(x = lon, y = lat),
+             color = "red", size = 0.1) +
+  xlim(-185, -125) + 
+  theme_classic() + 
+  labs(x = "Longitude", 
+       y = "Latitude", 
+       title = "FIA Forest Plot Locations in Alaska, USA") + 
+  annotation_north_arrow(
+    location = "tr", # Top Right
+    which_north = "true",
+    style = north_arrow_nautical(
+      fill = c("grey40", "white"),
+      line_col = "grey20"
+    ),
+    pad_x = unit(1, "in"), pad_y = unit(0.2, "in")
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+---
+class: center
+
+# FIA Data
+
+![](Figures/TreeFigure.png){width="413"}
+
+
+
+---
+class: center
+
+```{r, out.width="80%"}
+fia_data %>% 
+  mutate(lat_band = cut(LAT, breaks = seq(54, 72, by = 1),
+                        include.lowest = TRUE, dig.lab = 4)) %>% 
+  ggplot() +
+  geom_polygon(data = alaska_map,
+               aes(x = long, y = lat, group = group),
+               fill = "gray90", color = "black") +
+  geom_point(aes(x = LON, y = LAT, color = lat_band),
+             size = 0.5) +
+  coord_quickmap(xlim = c(-158, -128), ylim = c(54, 64)) +
+  theme_classic() +
+  labs(x = "Longitude",
+       y = "Latitude",
+       title = "FIA Forest Plot Locations in Alaska, USA") +
+  annotation_north_arrow(
+    location = "tr", # Top Right
+    which_north = "true",
+    style = north_arrow_nautical(
+      fill = c("grey40", "white"),
+      line_col = "grey20"
+    ),
+    pad_x = unit(1, "in"), pad_y = unit(0.2, "in")
+  ) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position="none")
+```
+
+
+
+---
+class: center
+
+
+```{r Bootstrapping SD & mean w/ latitude, out.width="80%"}
+set.seed(480)
+
+# Add latitude bands
+fia_data <- fia_data %>%
+  mutate(lat_band = cut(LAT, breaks = seq(54, 72, by = 1),
+                        include.lowest = TRUE, dig.lab = 4))
+
+# Get the unique bands
+bands <- unique(fia_data$lat_band)
+
+# Bootstrap SD for each band using a simple loop
+results <- lapply(bands, function(band) {
+  band_data <- fia_data %>% filter(lat_band == band)
+  
+  boot_sds <- replicate(1000, {
+    band_data %>%
+      slice_sample(prop = 1, replace = TRUE) %>%
+      summarize(sd_tree_c = sd(total_treeC_gm2, na.rm = TRUE)) %>%
+      pull(sd_tree_c)
+  })
+  
+  tibble(lat_band = band, resamp_sd = boot_sds)
+})
+
+# Combine into one dataframe
+bootstrap_dis_sd <- bind_rows(results)
+# ggplot(bootstrap_dis_sd, aes(x = resamp_sd, fill = lat_band)) +
+# #  geom_histogram(aes(y = ..density..),
+# #    bins = 30, fill = "steelblue", alpha = 0.7) +
+#   geom_density() +
+#   labs(
+#     x = "Bootstrapped SD of Carbon Stock (g/m²)",
+#     title = "Bootstrap Distribution of Total Tree Carbon Standard Deviation by Latitude", 
+#     fill = "Latitude Band", 
+#     y = ""
+#   ) +
+#   theme_minimal()
+```
+
+```{r, out.width="80%"}
+ggplot(bootstrap_dis_sd, aes(x = resamp_sd, fill = lat_band)) +
+#  geom_histogram(aes(y = ..density..),
+#    bins = 30, fill = "steelblue", alpha = 0.7) +
+  geom_density() + 
+  labs(
+    x = "Bootstrapped SD of Carbon Stock (g/m²)",
+    y = "Count",
+    title = "Bootstrap Distribution of Carbon Variability by Latitude Band", 
+    fill = "Latitude Band"
+  ) +
+  theme_minimal() + 
+  guides(fill = guide_legend(reverse = TRUE))
+
+```
+
+
+
+
+
+---
+class: center
+```{r, out.width="80%"}
+ggplot(bootstrap_dis_sd, aes(x = resamp_sd, fill = lat_band)) +
+  geom_boxplot() + 
+  labs(
+    x = "Bootstrapped SD of Total Tree Carbon (g/m²)",
+    title = "Bootstrap Distribution of Carbon Variability by Latitude Band", 
+    fill = "Latitude Band"
+  ) +
+  theme_minimal() +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+---
+class: center
+
+
+
+```{r, out.width="80%"}
+#removing big one to see what's up 
+bootstrap_dis_sd %>% 
+  filter(lat_band != "(59,60]") %>% 
+  ggplot(aes(x = resamp_sd, fill = lat_band)) +
+  geom_boxplot() + 
+  labs(
+    x = "Bootstrapped SD of Total Tree Carbon (g/m²)",
+    title = "Bootstrap Distribution of Carbon Variability by Latitude Band", 
+    fill = "Latitude Band", 
+    subtitle = "Removed (59,60] Band"
+  ) +
+  theme_minimal() + 
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_fill_brewer()
+```
+
+
+---
+class: center
+
+```{r, out.width="80%"}
+fia_data %>%
+  select(lat_band, Common.Name) %>%
+  ggplot(aes(x = lat_band, y = Common.Name, fill = Common.Name)) + 
+  geom_col() + 
+  theme_classic() + 
+  theme(axis.text.y = element_blank()) + 
+  labs(x = "Latitude Band", 
+       y = " ", 
+       fill = "Tree Species")
+`
