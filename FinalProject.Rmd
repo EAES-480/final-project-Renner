@@ -27,10 +27,8 @@ library(xaringan)
 ```
 
 ```{r Reading in Data}
-fia_data <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/nondecline_treeC.csv")
-soildata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/ISCNprofiles_near_FIAplots - ISCNprofiles_near_FIAplots.csv")
-fia_data2 <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/non_decline_forestCstocks - non_decline_forestCstocks.csv")
-#trydata <- read.csv("/Users/ameliarenner/Documents/EAES 480/Final Project/Data/CTR_tree_trydat.csv")
+fia_data <- read.csv("/Data/nondecline_treeC.csv")
+fia_data2 <- read.csv("/Data/non_decline_forestCstocks - non_decline_forestCstocks.csv")
 ```
 
 ```{r Data Cleaning}
