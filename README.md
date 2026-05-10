@@ -1,13 +1,3 @@
----
-title: "README"
-author: "Amelia Renner"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 # Introduction
 
 FIA data are collected on permanent plots around the US; this set is from Alaska. Each case is a tree measured in a plot in a year. The same trees are measured year after year. The variables relate to tree carbon storage; the ones I am most interested in are my outcome variable (total tree carbon) and a few of explanatory variables (downed woody debris, elevation, longitude/latitude, and forest type).
